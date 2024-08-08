@@ -14,21 +14,24 @@
 </body>
 </html>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div id="tetris">
-        <canvas id="tetrisCanvas" width="300" height="600"></canvas>
-    </div>
-    <script src="script.js"></script>
-</body>
-</html>
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #000;
+}
+
+#tetris {
+    border: 2px solid #fff;
+    background-color: #000;
+}
+
+canvas {
+    display: block;
+}
+
 
 const canvas = document.getElementById('tetrisCanvas');
 const context = canvas.getContext('2d');
@@ -36,7 +39,6 @@ const canvasWidth = canvas.width;
 const canvasHeight = canvas.height;
 const blockSize = 30; // Size of each block
 
-// Define the colors for different Tetrominoes
 const colors = [
     'cyan', // I
     'blue', // J
@@ -182,3 +184,10 @@ function drawGame() {
 
 document.addEventListener('keydown', handleKeydown);
 gameInterval = setInterval(moveTetrominoDown, 1000);
+
+                git add .
+git commit -m "Add initial Tetris game files"
+git push origin main
+
+
+                
