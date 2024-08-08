@@ -3,78 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris</title>
+    <title>Simple Tetris</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="tetris">
-        <canvas id="tetrisCanvas" width="300" height="600"></canvas>
-    </div>
+    <h1>Simple Tetris</h1>
+    <canvas id="tetris" width="300" height="600"></canvas>
     <script src="script.js"></script>
 </body>
 </html>
 
-body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    background-color: #000;
-}
-
-#tetris {
-    border: 2px solid #fff;
-    background-color: #000;
-}
-
-canvas {
-    display: block;
-}
-
-
-const canvas = document.getElementById('tetrisCanvas');
+const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
-const canvasWidth = canvas.width;
-const canvasHeight = canvas.height;
-const blockSize = 30; // Size of each block
+
+const ROWS = 20;
+const COLS = 10;
+const BLOCK_SIZE = 30;
 
 const colors = [
-    'cyan', // I
-    'blue', // J
-    'orange', // L
-    'yellow', // O
-    'green', // S
-    'purple', // T
-    'red' // Z
+    'cyan', 'blue', 'orange', 'yellow', 'green', 'purple', 'red'
 ];
 
 const tetrominoes = [
     [[1, 1, 1, 1]], // I
     [[1, 1, 1], [0, 1, 0]], // T
-    [[1, 1, 0], [0, 1, 1]], // S
-    [[0, 1, 1], [1, 1, 0]], // Z
+    [[1, 1, 0], [0, 1, 1]], // Z
+    [[0, 1, 1], [1, 1, 0]], // S
     [[1, 1], [1, 1]], // O
     [[1, 1, 1], [1, 0, 0]], // L
-    [[1, 1, 1], [0, 0, 1]] // J
+    [[1, 1, 1], [0, 0, 1]]  // J
 ];
 
-let board = Array.from({ length: canvasHeight / blockSize }, () => Array(canvasWidth / blockSize).fill(0));
-let currentTetromino = getRandomTetromino();
-let currentX = Math.floor(canvasWidth / blockSize / 2) - 1;
-let currentY = 0;
+let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+let currentTetromino;
+let currentX, currentY;
 let gameInterval;
 
 function drawBlock(x, y, color) {
     context.fillStyle = color;
-    context.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+    context.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
     context.strokeStyle = '#000';
-    context.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+    context.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
 }
 
 function drawBoard() {
-    for (let y = 0; y < board.length; y++) {
-        for (let x = 0; x < board[y].length; x++) {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
             if (board[y][x]) {
                 drawBlock(x, y, colors[board[y][x] - 1]);
             }
@@ -83,24 +58,47 @@ function drawBoard() {
 }
 
 function drawTetromino() {
+    const color = colors[currentTetromino.color - 1];
     currentTetromino.shape.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (value) {
-                drawBlock(currentX + x, currentY + y, colors[currentTetromino.color - 1]);
+        row.forEach((cell, x) => {
+            if (cell) {
+                drawBlock(currentX + x, currentY + y, color);
             }
         });
     });
 }
 
-function getRandomTetromino() {
-    const index = Math.floor(Math.random() * tetrominoes.length);
-    return { shape: tetrominoes[index], color: index + 1 };
+function collide(x, y) {
+    for (let row = 0; row < currentTetromino.shape.length; row++) {
+        for (let col = 0; col < currentTetromino.shape[row].length; col++) {
+            if (currentTetromino.shape[row][col] && (
+                x + col < 0 ||
+                x + col >= COLS ||
+                y + row >= ROWS ||
+                board[y + row][x + col]
+            )) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-function clearFullRows() {
+function mergeTetromino() {
+    currentTetromino.shape.forEach((row, y) => {
+        row.forEach((cell, x) => {
+            if (cell) {
+                board[currentY + y][currentX + x] = currentTetromino.color;
+            }
+        });
+    });
+    removeFullRows();
+}
+
+function removeFullRows() {
     board = board.reduce((acc, row) => {
-        if (row.every(cell => cell !== 0)) {
-            acc.unshift(Array(canvasWidth / blockSize).fill(0));
+        if (row.every(cell => cell)) {
+            acc.unshift(Array(COLS).fill(0));
         } else {
             acc.push(row);
         }
@@ -108,86 +106,70 @@ function clearFullRows() {
     }, []);
 }
 
-function moveTetrominoDown() {
-    currentY++;
-    if (!isValidPosition()) {
-        currentY--;
+function dropTetromino() {
+    if (collide(currentX, currentY + 1)) {
         mergeTetromino();
-        clearFullRows();
-        currentTetromino = getRandomTetromino();
-        currentX = Math.floor(canvasWidth / blockSize / 2) - 1;
-        currentY = 0;
-        if (!isValidPosition()) {
+        newTetromino();
+        if (collide(currentX, currentY)) {
             clearInterval(gameInterval);
             alert('Game Over!');
         }
+    } else {
+        currentY++;
     }
-}
-
-function mergeTetromino() {
-    currentTetromino.shape.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (value) {
-                board[currentY + y][currentX + x] = currentTetromino.color;
-            }
-        });
-    });
-}
-
-function isValidPosition() {
-    return currentTetromino.shape.every((row, y) => {
-        return row.every((value, x) => {
-            const boardX = currentX + x;
-            const boardY = currentY + y;
-            return value === 0 || (boardX >= 0 && boardX < canvasWidth / blockSize && boardY < canvasHeight / blockSize && board[boardY][boardX] === 0);
-        });
-    });
+    drawBoard();
+    drawTetromino();
 }
 
 function rotateTetromino() {
-    const originalShape = currentTetromino.shape;
-    currentTetromino.shape = rotateMatrix(currentTetromino.shape);
-    if (!isValidPosition()) {
-        currentTetromino.shape = originalShape;
+    const shape = currentTetromino.shape;
+    const newShape = shape[0].map((_, i) => shape.map(row => row[i])).reverse();
+    const tempTetromino = { ...currentTetromino, shape: newShape };
+
+    if (!collide(currentX, currentY)) {
+        currentTetromino.shape = newShape;
     }
 }
 
-function rotateMatrix(matrix) {
-    return matrix[0].map((_, i) => matrix.map(row => row[i])).reverse();
+function moveTetromino(dx) {
+    if (!collide(currentX + dx, currentY)) {
+        currentX += dx;
+    }
+    drawBoard();
+    drawTetromino();
 }
 
-function handleKeydown(event) {
+function newTetromino() {
+    const type = Math.floor(Math.random() * tetrominoes.length);
+    currentTetromino = { color: type + 1, shape: tetrominoes[type] };
+    currentX = Math.floor(COLS / 2) - 1;
+    currentY = 0;
+}
+
+function handleKeyPress(event) {
     switch (event.key) {
         case 'ArrowLeft':
-            currentX--;
-            if (!isValidPosition()) currentX++;
+            moveTetromino(-1);
             break;
         case 'ArrowRight':
-            currentX++;
-            if (!isValidPosition()) currentX--;
+            moveTetromino(1);
             break;
         case 'ArrowDown':
-            moveTetrominoDown();
+            dropTetromino();
             break;
         case 'ArrowUp':
             rotateTetromino();
             break;
     }
-    drawGame();
 }
 
-function drawGame() {
-    context.clearRect(0, 0, canvasWidth, canvasHeight);
+function startGame() {
+    board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    newTetromino();
     drawBoard();
     drawTetromino();
+    gameInterval = setInterval(dropTetromino, 500);
 }
 
-document.addEventListener('keydown', handleKeydown);
-gameInterval = setInterval(moveTetrominoDown, 1000);
-
-                git add .
-git commit -m "Add initial Tetris game files"
-git push origin main
-
-
-                
+document.addEventListener('keydown', handleKeyPress);
+startGame();
